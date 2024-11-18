@@ -6,7 +6,6 @@ from allauth.socialaccount.models import SocialApp
 from django.conf import settings
 from django.contrib.sites.models import Site
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
-from django.db import transaction
 from django.urls import reverse
 from selenium.webdriver.chrome.service import Service
 
@@ -71,10 +70,10 @@ class UrlsTest(StaticLiveServerTestCase):
         facebook_app.sites.add(site)
 
     def test_responses(
-            self,
-            allowed_http_codes=[200, 302, 405, 401, 404],
-            credentials={},
-            default_kwargs={},
+        self,
+        allowed_http_codes=[200, 302, 405, 401, 404],
+        credentials={},
+        default_kwargs={},
     ):
         module = importlib.import_module(settings.ROOT_URLCONF)
 
@@ -95,7 +94,7 @@ class UrlsTest(StaticLiveServerTestCase):
                 regex = pattern.pattern.regex
                 if regex.groups > 0:
                     if regex.groups > len(list(regex.groupindex.keys())) or set(
-                            regex.groupindex.keys()
+                        regex.groupindex.keys()
                     ) - set(default_kwargs.keys()):
                         skip = True
                     else:
