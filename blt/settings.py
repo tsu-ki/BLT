@@ -105,6 +105,7 @@ INSTALLED_APPS = (
     "dj_rest_auth",
     "dj_rest_auth.registration",
     "blog",
+    "corsheaders",
 )
 
 
@@ -121,7 +122,16 @@ MIDDLEWARE = (
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "tz_detect.middleware.TimezoneMiddleware",
     "blt.middleware.ip_restrict.IPRestrictMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
 )
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:41455",
+    "http://localhost:8082",
+    # Add other origins as necessary
+]
+
+CORS_ALLOW_CREDENTIALS = True  # Allow credentials to be included in requests
 
 TESTING = len(sys.argv) > 1 and sys.argv[1] == "test"
 
