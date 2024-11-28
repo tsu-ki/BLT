@@ -79,7 +79,7 @@ INSTALLED_APPS = (
     "django.contrib.sites",
     "django.contrib.humanize",
     "website",
-    "company",
+    "organization",
     "allauth",
     "allauth.account",
     "allauth.socialaccount",
@@ -341,7 +341,7 @@ STATIC_URL = "/static/"
 # Extra places for collectstatic to find static files.
 STATICFILES_DIRS = (
     os.path.join(BASE_DIR, "website", "static"),
-    os.path.join(BASE_DIR, "company", "static"),
+    os.path.join(BASE_DIR, "organization", "static"),
 )
 
 ABSOLUTE_URL_OVERRIDES = {
