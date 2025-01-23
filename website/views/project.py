@@ -1,5 +1,6 @@
 import ipaddress
 import json
+import logging
 import re
 import socket
 import time
@@ -20,7 +21,8 @@ from django.contrib.humanize.templatetags.humanize import naturaltime
 from django.core.exceptions import ValidationError
 from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
 from django.core.validators import URLValidator
-from django.db.models import F, Q, Sum
+from django.db.models import Count, F, Q, Sum
+from django.db.models.functions import TruncDate
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -45,7 +47,7 @@ from website.models import (
 )
 from website.utils import admin_required
 
-# logging.getLogger("matplotlib").setLevel(logging.ERROR)
+logging.getLogger("matplotlib").setLevel(logging.ERROR)
 
 
 def blt_tomato(request):
@@ -96,69 +98,30 @@ def distribute_bacon(request, contribution_id):
 
 
 class ProjectBadgeView(APIView):
-    def get_client_ip(self, request):
-        # Check X-Forwarded-For header first
-        x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
-        if x_forwarded_for:
-            # Return first IP in chain (real client IP)
-            ip = x_forwarded_for.split(",")[0].strip()
-            return ip
-
-        # Try X-Real-IP header next
-        x_real_ip = request.META.get("HTTP_X_REAL_IP")
-        if x_real_ip:
-            return x_real_ip
-
-        # Finally fall back to REMOTE_ADDR
-        remote_addr = request.META.get("REMOTE_ADDR")
-        return remote_addr
-
     def get(self, request, slug):
-        # Get the project or return 404
+        # Retrieve the project or return 404
         project = get_object_or_404(Project, slug=slug)
 
-        # Get today's date
-        today = now().date()
+        # Get unique visits, grouped by date
+        visit_counts = (
+            IP.objects.filter(path=request.path)
+            .annotate(date=TruncDate("created"))
+            .values("date")
+            .annotate(visit_count=Count("address"))
+            .order_by("date")  # Order from oldest to newest
+        )
 
-        # Get the real client IP
-        user_ip = self.get_client_ip(request)
+        # Update project visit count
+        project.repo_visit_count += 1
+        project.save()
 
-        # Continue with existing code but use the new user_ip
-        visited_data = IP.objects.filter(
-            address=user_ip, path=request.path, created__date=today
-        ).last()
-
-        if visited_data:
-            # If the creation date is today
-            if visited_data.created.date() == today:
-                # If the visit count is 1, update the project visit count
-                if visited_data.count == 1:
-                    project.project_visit_count = F("project_visit_count") + 1
-                    project.save()
-            else:
-                # If the creation date is not today, reset the creation date and count
-                visited_data.created = now()
-                visited_data.count = 1
-                visited_data.save()
-
-                # Increment the project visit count
-                project.project_visit_count = F("project_visit_count") + 1
-                project.save()
-        else:
-            # If no record exists, create a new one
-            IP.objects.create(address=user_ip, path=request.path, created=now(), count=1)
-
-            # Increment the project's visit count
-            project.project_visit_count = F("project_visit_count") + 1
-            project.save()
-
-        # Refresh project to get the latest visit count
-        project.refresh_from_db()
-
-        total_views = project.project_visit_count
+        # Extract dates and counts
+        dates = [entry["date"] for entry in visit_counts]
+        counts = [entry["visit_count"] for entry in visit_counts]
+        total_views = sum(counts)  # Calculate total views
 
         fig = plt.figure(figsize=(4, 1))
-        plt.bar(0, total_views, color="red", width=0.5)
+        plt.bar(dates, counts, width=0.5, color="red")
 
         plt.title(
             f"{total_views}",
@@ -185,7 +148,6 @@ class ProjectBadgeView(APIView):
         response["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
         response["Pragma"] = "no-cache"
         response["Expires"] = "0"
-
         return response
 
 
