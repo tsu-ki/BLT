@@ -263,6 +263,8 @@ from website.views.user import (
     invite_friend,
     profile,
     profile_edit,
+    recommend_user,
+    recommend_via_blurb,
     referral_signup,
     update_bch_address,
     user_dashboard,
@@ -954,6 +956,8 @@ urlpatterns = [
     path("initiate-transaction/", initiate_transaction, name="initiate_transaction"),
     path("api/get-wallet-balance/", get_wallet_balance, name="get_wallet_balance"),
     path("extension/", TemplateView.as_view(template_name="extension.html"), name="extension"),
+    path("recommend/<int:user_id>/", recommend_user, name="recommend_user"),
+    path("recommend/<str:username>/blurb/", recommend_via_blurb, name="recommend_via_blurb"),
 ]
 
 if settings.DEBUG:
